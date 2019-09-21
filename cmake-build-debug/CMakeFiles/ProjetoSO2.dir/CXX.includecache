@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/cygdrive/d/C_CPlusPlus_Applications/ProjetoSO2/main.cpp
+iostream
+-
+stdio.h
+-
+string.h
+-
+string
+-
+fstream
+-
+
