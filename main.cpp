@@ -5,15 +5,20 @@
 #include <string.h>
 #include <string>
 #include <fstream>
+#include <csignal>
+#include <windows.h>
 
 using namespace std;
 
 //Variáveis globais - Início
-ofstream fp;
-char caminho[200] = "";
+ofstream fp; //File em modo de write
+ifstream fr; // File em modo de read
+//char caminho[200] = "";
 char comando[200];
 char nome[200]; //nome do HD Virtual
+char nomeArquivo[200]; // nome do Arquivo
 int estadoDoComando = 0; //Variável que diz em qual comando o usuário se encontra
+static volatile bool g_exit = false;
 /*
  * 0 - não esta em nenhum estado
  * 1 - createhd
@@ -33,8 +38,10 @@ void escreveArquivo();
 void criaTabela();
 void saiHD();
 void criaArquivo();
-void escreveArquivo();
+void escreveArquivo(char nomeArquivo[200]);
 int iguais(char v[], char d[]);
+string nomeHDComTxt(char* nomeHd);
+
 //Fim dos Métodos
 
 int main(int argc, char *argv[])
@@ -42,12 +49,11 @@ int main(int argc, char *argv[])
     while(true){
         recebeComando();
     }
-    //fp.close();
 }
 
 void imprimeHashtag(){
     if(strlen(nome) == 0){
-        cout << "# " << caminho;
+        cout << "# ";
     }
     else{
         string nomeDoComando = nome;
@@ -64,20 +70,36 @@ void recebeComando(){
 }
 
 void criaHD(){
-    string nomeString = nome;
-    nomeString += ".txt";
+    string nomeString = nomeHDComTxt(nome);
 
     fp.open(nomeString);
     criaTabela();
     fp.close();
 }
 
-void escreveArquivo(){
+void escreveArquivo(char nomeArquivo[200]){
 
+    char conteudo[200];
 
-    cout << "Digite o conteúdo do arquivo:\n";
-    fp.open(nome);
-    fp.close();
+    string nomeString = nomeHDComTxt(nomeArquivo);
+    fr.open(nomeString);
+    char teste[1024][32];
+
+    for(int i = 0; i< 1024; i++){
+        for(int j = 0; j<32;j++){
+            fr >> teste[i][j];
+        }
+    }
+
+    cout << "Digite o conteudo do arquivo:\n";
+    gets(conteudo);
+    fflush(stdin);
+}
+
+string nomeHDComTxt(char* nomeHd){
+    string nomeString = nomeHd;
+    nomeString += ".txt";
+    return nomeString;
 }
 
 void verificadorDeComando(){
@@ -101,11 +123,11 @@ void verificadorDeComando(){
             cout << "Não é permitido realizar este comando sem um HD criado\n";
             return;
         }
-        //for (i = 7 ;comando[i] != 0 ; i++){
-        //    nome[k] = comando[i];
-        //    k++;
-        //}
-        escreveArquivo();
+        for (i = 7 ;comando[i] != 0 ; i++){
+            nomeArquivo[k] = comando[i];
+            k++;
+        }
+        escreveArquivo(nomeArquivo);
     }
     else{
         cout << "Comando invalido\n";
