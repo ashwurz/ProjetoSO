@@ -6,10 +6,12 @@
 #include <string.h>
 #include <string>
 #include <fstream>
+#include <cstdlib>
 
 using namespace std;
 
 //Variaveis globais - Inicio
+
 ofstream fp; //File em modo de write
 ifstream fr; // File em modo de read
 char comando[200];
@@ -24,10 +26,10 @@ char proximo[200];
  * 2 - create
  */
 
-
 // Fim das Variveis globais
 
 //Metodos - Inicio
+
 void imprimeHashtag();
 void recebeComando();
 void verificadorDeComando();
@@ -35,12 +37,13 @@ void criaHD();
 void criaTabela();
 void escreveArquivo(char nomeArquivo[200]);
 int iguais(char v[], char d[]);
-string nomeHDComTxt(char* nomeHd);
+string nomeHDComTxt();
 void confirmaDisponibilidadeD(char conteudo[200]);
 int confirmaDisponibilidadeA();
 void criaArquivo(int i, char conteudo[200]);
 void criaProximo(int i);
 void incrementaProximo();
+void saiPrograma();
 
 
 //Fim dos Metodos
@@ -97,8 +100,8 @@ void escreveArquivo(char nomeArquivo[16]){
 
 }
 
-string nomeHDComTxt(char* nomeHd){
-    string nomeString = nomeHd;
+string nomeHDComTxt(){
+    string nomeString = nome;
     nomeString += ".txt";
     return nomeString;
 }
@@ -129,6 +132,9 @@ void verificadorDeComando(){
             k++;
         }
         escreveArquivo(nomeArquivo);
+    }
+    else if(iguais("exit",comando)){
+        saiPrograma();
     }
     else{
         cout << "Comando invalido\n";
@@ -348,4 +354,8 @@ void incrementaProximo(){
             }
         }
     }
+}
+
+void saiPrograma(){
+    exit(0);
 }
