@@ -11,14 +11,12 @@ iostream
 -
 stdio.h
 -
+sstream
+-
 string.h
 -
 string
 -
 fstream
--
-csignal
--
-windows.h
 -
 
