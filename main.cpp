@@ -16,10 +16,12 @@ ofstream fp; //File em modo de write
 ifstream fr; // File em modo de read
 char comando[200];
 char nome[200]; //nome do HD Virtual
+char hdtxt[200]; //nome do HD com estensao txt
 char nomeArquivo[16]; // nome do Arquivo
 int estadoDoComando = 0; //Variavel que diz em qual comando o usuario se encontra
 char HD[1024][32];
 char proximo[200];
+char conteudo[1000];
 /*
  * 0 - nao esta em nenhum estado
  * 1 - createhd
@@ -35,15 +37,17 @@ void recebeComando();
 void verificadorDeComando();
 void criaHD();
 void criaTabela();
-void escreveArquivo(char nomeArquivo[200]);
+void escreveHD();
+void escreveArquivo();
+void deleteArquivo();
 int iguais(char v[], char d[]);
 string nomeHDComTxt();
-void confirmaDisponibilidadeD(char conteudo[200]);
-int confirmaDisponibilidadeA();
-void criaArquivo(int i, char conteudo[200]);
+void confirmaDisponibilidadeD();
+int * confirmaDisponibilidadeA(int n);
+void criaArquivo(int i);
 void criaProximo(int i);
-void incrementaProximo();
 void saiPrograma();
+void leHD();
 
 
 //Fim dos Metodos
@@ -74,30 +78,67 @@ void recebeComando(){
 }
 
 void criaHD(){
-    fp.open(nome);
+    string temp;
+	temp = nomeHDComTxt();
+	strcpy(hdtxt, temp.c_str());
+    fp.open(hdtxt);
     criaTabela();
     fp.close();
 }
 
-void escreveArquivo(char nomeArquivo[16]){
-    char conteudo[1000];
-
-    fr.open(nome);
-
-    for(int i = 0; i< 1024; i++){
-        for(int j = 0; j<32;j++){
-            fr >> HD[i][j];
-        }
-    }
-
-    fr.close();
-
+void escreveArquivo(){
+    leHD();
     cout << "Digite o conteudo do arquivo:\n";
     gets(conteudo);
     fflush(stdin);
-    confirmaDisponibilidadeD(conteudo);
+    confirmaDisponibilidadeD();
     memset(nomeArquivo,'\0', 16);
 
+}
+
+void deleteArquivo(){
+    leHD();
+    char tempNomeArquivo[16];
+    char tempPosConteudo[4];
+    int posicaoConteudo = 0;
+    for(int i = 0; i < 20; i++){
+        for(int j = 16; j < 32; j++){
+            if(HD[i][j] != 0) {
+                tempNomeArquivo[j - 16] = HD[i][j];
+            }
+        }
+        if(iguais(nomeArquivo, tempNomeArquivo)){
+            HD[i][0] = '0';
+            for(int k = 8; k < 12; k++){
+                tempPosConteudo[k - 8] = HD[i][k];
+            }
+            posicaoConteudo = atoi(tempPosConteudo);
+        }
+    }
+    HD[posicaoConteudo][0] = '0';
+    while ( posicaoConteudo != 0){
+        HD[posicaoConteudo][0] = '0';
+	    for(int k = 4; k < 8; k++){
+	        tempPosConteudo[k - 4] = HD[posicaoConteudo][k];
+	    }
+	    posicaoConteudo = atoi(tempPosConteudo);
+	}
+    escreveHD();
+}
+
+void escreveHD(){
+    fp.open(hdtxt);
+    for (int i = 0; i<1024; i++){
+        for (int j = 0; j< 33 ;j++){
+            if(j == 32){
+                fp << endl;
+            }
+            else{
+                fp << HD[i][j];
+            }
+        }
+    }
+    fp.close();
 }
 
 string nomeHDComTxt(){
@@ -131,7 +172,18 @@ void verificadorDeComando(){
             nomeArquivo[k] = comando[i];
             k++;
         }
-        escreveArquivo(nomeArquivo);
+        escreveArquivo();
+    }
+    else if(iguais("delete ", comando)){
+        if(estadoDoComando == 0){
+            cout << "Comando nao permitido";
+            return;
+        }
+        for(i = 7; comando[i] != 0; i++){
+            nomeArquivo[k] = comando[i];
+            k++;
+        }
+        deleteArquivo();
     }
     else if(iguais("exit",comando)){
         saiPrograma();
@@ -171,40 +223,38 @@ void criaTabela(){
     }
 }
 
-void confirmaDisponibilidadeD(char conteudo[200]){
-    for (int i = 0; i<20; i++){
+void confirmaDisponibilidadeD(){
+    for (int i = 0; i<=20; i++){
         if(HD[i][0] == '0'){
-            criaArquivo(i, conteudo);
-            fp.open(nome);
-            for (int i = 0; i<1024; i++){
-                for (int j = 0; j< 33 ;j++){
-                    if(j == 32){
-                        fp << endl;
-                    }
-                    else{
-                        fp << HD[i][j];
-                    }
-                }
-            }
-            fp.close();
+            criaArquivo(i);
+            escreveHD();
             return;
         }
     }
 }
 
-int confirmaDisponibilidadeA(){
-    for (int i = 20; i<1024; i++){
-        if(HD[i][0] == '0'){
-            return i;
-        }
+int * confirmaDisponibilidadeA(int n){
+	int *disponiveis = new int[n];
+	int m;
+	int i;
+	for(m = 0; m < n;m++){
+	    for (i= 20; i<1024; i++){
+            if(HD[i][0] == '0'){
+				disponiveis[m] = i;
+				HD[i][0] = '1';
+            	break;
+        	}
+		}
     }
+    return disponiveis;
 }
 
-void criaArquivo(int i, char conteudo[200]){
+void criaArquivo(int i){
     int tamanho = strlen(conteudo);
-    int nLinhas = tamanho/24;
-    int a = confirmaDisponibilidadeA();
-    criaProximo(a+1);
+    int nLinhas = (tamanho/24) + 1;
+    int *a;
+    a = confirmaDisponibilidadeA(nLinhas);
+    criaProximo(a[0]);
     stringstream strs;
     strs  << tamanho;
     string temp_str = strs.str();
@@ -266,94 +316,70 @@ void criaArquivo(int i, char conteudo[200]){
             HD[i][k] = nomeArquivo[k-16];
         }
     }
-    if ((a + nLinhas) <= 1024){
-        for (int j = a; j <= a + nLinhas;j++){
-            for (int k = 0; k < 32; k++){
-                if ( k == 0){
-                    HD[j][k] = '1';
+    for (int j = 0; j <= (nLinhas - 1);j++){
+		if(j != (nLinhas - 1)){
+            criaProximo(a[(j+1)]);
+		}
+        for (int k = 0; k < 32; k++){
+            if ( k >= 4 & k <= 7){
+                if(j == (nLinhas-1)){
+                    HD[(a[j])][k] = '0';
                 }
-                else if ( k >= 4 & k <= 7){
-                    if(nLinhas > 0 && j != (a +nLinhas)){
-                        HD[j][k] = proximo[k-4];
-                    }
-                    else{
-                        HD[j][k] = '0';
-                    }
-                }
-                else if ( k >= 8 & k <= 31){
-                    if (conteudo[atual] != 0){
-                        HD[j][k] = conteudo[atual];
-                        atual++;
-                    }
+                else{
+                    HD[(a[j])][k] = proximo[k-4];
                 }
             }
-            incrementaProximo();
-        }
-    }
-    else{
-        cout << "overflow de memoria";
-    }
+            else if ( k >= 8 & k <= 31){
+				if (conteudo[atual] != 0){
+                	HD[a[j]][k] = conteudo[atual];
+                	atual++;
+				}
+            }
+    	}
+	}
 }
 
 void criaProximo(int i){
     stringstream strs;
-    strs  << i;
-    string temp_str = strs.str();
+	strs  << i;
+	string temp_str = strs.str();
     if(strlen(temp_str.c_str()) == 1){
         proximo[0] = '0';
         proximo[1] = '0';
         proximo[2] = '0';
         proximo[3] = (char) temp_str.c_str()[0];
-    }
-    if(strlen(temp_str.c_str()) == 2){
+	}
+	if(strlen(temp_str.c_str()) == 2){
         proximo[0] = '0';
         proximo[1] = '0';
         proximo[2] = (char) temp_str.c_str()[0];
         proximo[3] = (char) temp_str.c_str()[1];
-    }
-    if(strlen(temp_str.c_str()) == 3){
+	}
+	if(strlen(temp_str.c_str()) == 3){
         proximo[0] = '0';
         proximo[1] = (char) temp_str.c_str()[0];
         proximo[2] = (char) temp_str.c_str()[1];
         proximo[3] = (char) temp_str.c_str()[2];
-    }
-    if(strlen(temp_str.c_str()) == 4){
+	}
+	if(strlen(temp_str.c_str()) == 4){
         proximo[0] = (char) temp_str.c_str()[0];
         proximo[1] = (char) temp_str.c_str()[1];
         proximo[2] = (char) temp_str.c_str()[2];
         proximo[3] = (char) temp_str.c_str()[3];
-    }
+	}
     return;
 }
 
-void incrementaProximo(){
-    int k = 3;
-    int valor;
-    int estourou = 0;
-    valor = proximo[k] - '0';
-    if (valor >=0 && valor <= 8){
-        proximo[k] = proximo[k] + 1;
-    }
-    else{
-        proximo[k] = '0';
-        estourou = 1;
-    }
-    k = 2;
-    if (estourou == 1){
-        while(estourou == 1 || k == 0){
-            valor = proximo[k] - '0';
-            if (valor >=0 && valor <= 7){
-                proximo[k] = proximo[k] + 1;
-                estourou = 0;
-            }
-            else if(valor == 8){
-                proximo[k] = '0';
-            }
-            else{
-                proximo[k] = '1';
-            }
+void leHD(){
+    fr.open(hdtxt);
+
+    for(int i = 0; i< 1024; i++){
+        for(int j = 0; j<32;j++){
+            fr >> HD[i][j];
         }
     }
+
+    fr.close();
 }
 
 void saiPrograma(){
