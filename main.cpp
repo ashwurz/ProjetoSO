@@ -18,6 +18,10 @@ char comando[200];
 char nome[200]; //nome do HD Virtual
 char hdtxt[200]; //nome do HD com estensao txt
 char nomeArquivo[16]; // nome do Arquivo
+char nomePasta[16]; //nome da pasta
+char nomePastaNavegacao[16]; // nome da pasta para navegaÃ§Ã£o
+char lista[20][16];
+string pastas; //string com os nomes das pastas;
 int estadoDoComando = 0; //Variavel que diz em qual comando o usuario se encontra
 char HD[1024][32];
 char proximo[200];
@@ -26,6 +30,9 @@ char conteudo[1000];
  * 0 - nao esta em nenhum estado
  * 1 - createhd
  * 2 - create
+ * 3 - cd
+ * 4 - mkdir
+ * 5 - delete
  */
 
 // Fim das Variveis globais
@@ -42,13 +49,15 @@ void escreveArquivo();
 void deleteArquivo();
 int iguais(char v[], char d[]);
 string nomeHDComTxt();
+void listaPastasArquivos();
+void confirmaDisponibilidadeP();
+void criaPasta(int i);
 void confirmaDisponibilidadeD();
 int * confirmaDisponibilidadeA(int n);
 void criaArquivo(int i);
 void criaProximo(int i);
 void saiPrograma();
 void leHD();
-
 
 //Fim dos Metodos
 
@@ -63,9 +72,16 @@ void imprimeHashtag(){
     if(strlen(nome) == 0){
         cout << "# ";
     }
+    else if(estadoDoComando == 3){
+        string nomeDoComando = nome;
+        string nomeDaPasta = nomePastaNavegacao;
+        pastas = pastas +  "\\" + nomeDaPasta;
+        string comandoComNome = "# " + nomeDoComando + pastas + "> ";
+        cout << comandoComNome;
+    }
     else{
         string nomeDoComando = nome;
-        string comandoComNome = "# " + nomeDoComando + "> ";
+        string comandoComNome = "# " + nomeDoComando + pastas + "> ";
         cout << comandoComNome;
     }
 }
@@ -79,8 +95,8 @@ void recebeComando(){
 
 void criaHD(){
     string temp;
-	temp = nomeHDComTxt();
-	strcpy(hdtxt, temp.c_str());
+    temp = nomeHDComTxt();
+    strcpy(hdtxt, temp.c_str());
     fp.open(hdtxt);
     criaTabela();
     fp.close();
@@ -93,7 +109,6 @@ void escreveArquivo(){
     fflush(stdin);
     confirmaDisponibilidadeD();
     memset(nomeArquivo,'\0', 16);
-
 }
 
 void deleteArquivo(){
@@ -118,11 +133,11 @@ void deleteArquivo(){
     HD[posicaoConteudo][0] = '0';
     while ( posicaoConteudo != 0){
         HD[posicaoConteudo][0] = '0';
-	    for(int k = 4; k < 8; k++){
-	        tempPosConteudo[k - 4] = HD[posicaoConteudo][k];
-	    }
-	    posicaoConteudo = atoi(tempPosConteudo);
-	}
+        for(int k = 4; k < 8; k++){
+            tempPosConteudo[k - 4] = HD[posicaoConteudo][k];
+        }
+        posicaoConteudo = atoi(tempPosConteudo);
+    }
     escreveHD();
 }
 
@@ -172,6 +187,7 @@ void verificadorDeComando(){
             nomeArquivo[k] = comando[i];
             k++;
         }
+        estadoDoComando = 2;
         escreveArquivo();
     }
     else if(iguais("delete ", comando)){
@@ -183,7 +199,33 @@ void verificadorDeComando(){
             nomeArquivo[k] = comando[i];
             k++;
         }
+        estadoDoComando = 5;
         deleteArquivo();
+    }
+    else if(iguais("mkdir ", comando)){
+        if(estadoDoComando == 0){
+            cout << "Comando nao permitido" << endl;
+            return;
+        }
+        for(i = 6; comando[i] != 0; i++){
+            nomePasta[k] = comando[i];
+            k++;
+        }
+        estadoDoComando = 4;
+        confirmaDisponibilidadeP();
+    }
+    else if(iguais("cd ", comando)){
+        if(estadoDoComando == 0){
+            cout << "Comando nao permitido";
+            return;
+        }
+        memset(nomePastaNavegacao,'\0', 16);
+        for(i = 3; comando[i] != 0; i++){
+            nomePastaNavegacao[k] = comando[i];
+            k++;
+        }
+        estadoDoComando = 3;
+        listaPastasArquivos();
     }
     else if(iguais("exit",comando)){
         saiPrograma();
@@ -223,6 +265,138 @@ void criaTabela(){
     }
 }
 
+void listaPastasArquivos(){
+    leHD();
+    char tempNomePasta[16];
+    char tempPosHD[4];
+    tempPosHD[0] = '0';
+    tempPosHD[1] = '0';
+    tempPosHD[2] = '0';
+    tempPosHD[3] = '0';
+    for(int i = 0; i < 20; i++){
+        if(HD[i][2] == '1'){
+            for(int j = 16; j < 32; j++){
+                if(HD[i][j] != 0) {
+                    tempNomePasta[j - 16] = HD[i][j];
+                }
+            }
+            if(iguais(nomePastaNavegacao, tempNomePasta)){
+                stringstream strs;
+                strs  << i;
+                string temp_str = strs.str();
+                if(strlen(temp_str.c_str()) == 1){
+                    tempPosHD[2] = '0';
+                    tempPosHD[3] = (char) temp_str.c_str()[0];
+                }
+                if(strlen(temp_str.c_str()) == 2){
+                    tempPosHD[2] = (char) temp_str.c_str()[0];
+                    tempPosHD[3] = (char) temp_str.c_str()[1];
+                }
+                break;
+            }
+        }
+    }
+    int k;
+    for(k = 0; k < 20; k++){
+        if(lista[k][0] == 0){
+            break;
+        }
+    }
+    for(int i = 0; i < 20; i++){
+        if(HD[i][4] == tempPosHD[0] && HD[i][5] == tempPosHD[1] && HD[i][6] == tempPosHD[2] && HD[i][7] == tempPosHD[3]){
+            for(int j = 16; j < 32; j++){
+                if(HD[i][j] != 0) {
+                    lista[k][j - 16] = HD[i][j];
+                }
+            }
+        }
+    }
+
+
+}
+
+/*void voltaTudo(){
+	for(int i =0;i< 20;i++){
+    memset(pastas[i],'\0', 16);
+	}
+}*/
+
+void confirmaDisponibilidadeP(){
+    leHD();
+    for (int i = 0; i<=20; i++){
+        if(HD[i][0] == '0'){
+            criaPasta(i);
+            escreveHD();
+            memset(nomePasta,'\0', 16);
+            return;
+        }
+    }
+}
+
+int pesquisa(){
+    char tempNomePasta[16];
+    for(int i = 0; i < 20; i++){
+        if(HD[i][2] == '1'){
+            for(int j = 16; j < 32; j++){
+                if(HD[i][j] != 0) {
+                    tempNomePasta[j - 16] = HD[i][j];
+                }
+            }
+            if(iguais(nomePastaNavegacao, tempNomePasta)){
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+void criaPasta(int i){
+    int l;
+    l = pesquisa();
+    l++;
+    for (int k = 0; k < 32; k++){
+        if ( k == 0){
+            HD[i][k] = '1';
+        }
+        else if ( k == 2){
+            HD[i][k] = '1';
+        }
+        else if ( k >= 4 & k <= 7){
+            if(l !=0){
+                char tempPosHD[4];
+                tempPosHD[0] = '0';
+                tempPosHD[1] = '0';
+                tempPosHD[2] = '0';
+                tempPosHD[3] = '0';
+                stringstream strs;
+                strs  << l;
+                string temp_str = strs.str();
+                if(strlen(temp_str.c_str()) == 1){
+                    tempPosHD[2] = '0';
+                    tempPosHD[3] = (char) temp_str.c_str()[0];
+                }
+                if(strlen(temp_str.c_str()) == 2){
+                    tempPosHD[2] = (char) temp_str.c_str()[0];
+                    tempPosHD[3] = (char) temp_str.c_str()[1];
+                }
+                HD[i][k] = tempPosHD[k-4];
+            }
+            else{
+                HD[i][k] = '0';
+            }
+        }
+        else if ( k >= 8 & k <= 11){
+            HD[i][k] = '0';
+        }
+        else if ( k >= 12 & k <= 15){
+            HD[i][k] = '0';
+        }
+        else if ( k >= 16 & k <= 31){
+            HD[i][k] = nomePasta[k-16];
+        }
+    }
+}
+
 void confirmaDisponibilidadeD(){
     for (int i = 0; i<=20; i++){
         if(HD[i][0] == '0'){
@@ -234,17 +408,17 @@ void confirmaDisponibilidadeD(){
 }
 
 int * confirmaDisponibilidadeA(int n){
-	int *disponiveis = new int[n];
-	int m;
-	int i;
-	for(m = 0; m < n;m++){
-	    for (i= 20; i<1024; i++){
+    int *disponiveis = new int[n];
+    int m;
+    int i;
+    for(m = 0; m < n;m++){
+        for (i= 20; i<1024; i++){
             if(HD[i][0] == '0'){
-				disponiveis[m] = i;
-				HD[i][0] = '1';
-            	break;
-        	}
-		}
+                disponiveis[m] = i;
+                HD[i][0] = '1';
+                break;
+            }
+        }
     }
     return disponiveis;
 }
@@ -284,6 +458,9 @@ void criaArquivo(int i){
         tamanhoConteudo[3] = (char) temp_str.c_str()[3];
     }
 
+    int l;
+    l = pesquisa();
+    l++;
     int atual = 0;
 
     for (int k = 0; k < 32; k++){
@@ -294,20 +471,31 @@ void criaArquivo(int i){
             HD[i][k] = '0';
         }
         else if ( k >= 4 & k <= 7){
-            //if(pasta){
-            //teste[i][k] = pasta[k-4];
-            //}
-            //else{
-            HD[i][k] = '0';
-            //}
+            if(l !=0){
+                char tempPosHD[4];
+                tempPosHD[0] = '0';
+                tempPosHD[1] = '0';
+                tempPosHD[2] = '0';
+                tempPosHD[3] = '0';
+                stringstream strs;
+                strs  << l;
+                string temp_str = strs.str();
+                if(strlen(temp_str.c_str()) == 1){
+                    tempPosHD[2] = '0';
+                    tempPosHD[3] = (char) temp_str.c_str()[0];
+                }
+                if(strlen(temp_str.c_str()) == 2){
+                    tempPosHD[2] = (char) temp_str.c_str()[0];
+                    tempPosHD[3] = (char) temp_str.c_str()[1];
+                }
+                HD[i][k] = tempPosHD[k-4];
+            }
+            else{
+                HD[i][k] = '0';
+            }
         }
         else if ( k >= 8 & k <= 11){
-            //if(pasta){
-            //teste[i][k] = "0";
-            //}
-            //else{
             HD[i][k] = proximo[k-8];
-            //}
         }
         else if ( k >= 12 & k <= 15){
             HD[i][k] = tamanhoConteudo[k-12];
@@ -317,9 +505,9 @@ void criaArquivo(int i){
         }
     }
     for (int j = 0; j <= (nLinhas - 1);j++){
-		if(j != (nLinhas - 1)){
+        if(j != (nLinhas - 1)){
             criaProximo(a[(j+1)]);
-		}
+        }
         for (int k = 0; k < 32; k++){
             if ( k >= 4 & k <= 7){
                 if(j == (nLinhas-1)){
@@ -330,43 +518,43 @@ void criaArquivo(int i){
                 }
             }
             else if ( k >= 8 & k <= 31){
-				if (conteudo[atual] != 0){
-                	HD[a[j]][k] = conteudo[atual];
-                	atual++;
-				}
+                if (conteudo[atual] != 0){
+                    HD[a[j]][k] = conteudo[atual];
+                    atual++;
+                }
             }
-    	}
-	}
+        }
+    }
 }
 
 void criaProximo(int i){
     stringstream strs;
-	strs  << i;
-	string temp_str = strs.str();
+    strs  << i;
+    string temp_str = strs.str();
     if(strlen(temp_str.c_str()) == 1){
         proximo[0] = '0';
         proximo[1] = '0';
         proximo[2] = '0';
         proximo[3] = (char) temp_str.c_str()[0];
-	}
-	if(strlen(temp_str.c_str()) == 2){
+    }
+    if(strlen(temp_str.c_str()) == 2){
         proximo[0] = '0';
         proximo[1] = '0';
         proximo[2] = (char) temp_str.c_str()[0];
         proximo[3] = (char) temp_str.c_str()[1];
-	}
-	if(strlen(temp_str.c_str()) == 3){
+    }
+    if(strlen(temp_str.c_str()) == 3){
         proximo[0] = '0';
         proximo[1] = (char) temp_str.c_str()[0];
         proximo[2] = (char) temp_str.c_str()[1];
         proximo[3] = (char) temp_str.c_str()[2];
-	}
-	if(strlen(temp_str.c_str()) == 4){
+    }
+    if(strlen(temp_str.c_str()) == 4){
         proximo[0] = (char) temp_str.c_str()[0];
         proximo[1] = (char) temp_str.c_str()[1];
         proximo[2] = (char) temp_str.c_str()[2];
         proximo[3] = (char) temp_str.c_str()[3];
-	}
+    }
     return;
 }
 
